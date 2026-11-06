@@ -2,8 +2,7 @@
 
 Three robots explore an office in Gazebo at the same time, build one shared map, and track their trajectories.
 
-ROS 2 Humble, C++, Gazebo Sim (Fortress). The exploration algorithm comes from
-[`AMR_Practice_project`](../AMR_Practice_project).
+ROS 2 Humble, C++, Gazebo Sim (Fortress). The exploration algorithm comes from (https://github.com/Spathneja21/AMR).
 
 ## Commands
 
