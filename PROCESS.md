@@ -68,7 +68,42 @@ all topics up (`/scan`, `/odom`, `/ground_truth/odom`, `/tf`, `/clock`, `/joint_
 (~4.7–7.6 m), `/cmd_vel` 0.2 m/s moved the robot to true x = 1.15 m. SLAM + explorer not run yet in this project.
 README rewritten from scratch; "Commands" section added.
 
+## 4. Phases 2–4: namespaced robots, fleet launch, robots see each other (2026-11-07)
+
+**Naming:** topics under `/robotN/...`, TF frames prefixed `robotN/`. Shared: `/clock`, `/tf`, `/tf_static`.
+
+- `scripts/urdf_gazebo_nosensors.py [ns]`: with a namespace, rewrites plugin `<topic>`/`<odom_topic>` to
+  `/robotN/...` (cmd_vel, odom, joint_states, ground_truth/odom), ground-truth `tf_topic`, and
+  `frame_id`/`child_frame_id`/`robot_base_frame` to `robotN/...`. `/tf` stays shared, `odom_frame world`
+  untouched. Without an argument the output is identical to the AMR script (diffed).
+- `gazebo_lidar`: relative topics (`scan`, `ground_truth/odom`), frame `robotN/lidar_link` from the node
+  namespace, new param `other_robots` -> subscribes to their `/robotX/ground_truth/odom` and ray casts a
+  disc (`robot_radius` 0.13 m, chassis 0.16x0.18 + wheels) per robot.
+- `lidar_explorer`: relative topics (`scan`, `odom`, `map`, `cmd_vel`, `explorer_*`), new params
+  `map_frame` / `base_frame`. Algorithm unchanged.
+- `launch/fleet.launch.py` (replaces `gazebo.launch.py`): per robot spawn (`-x -y -Y`), RSP
+  (`frame_prefix robotN/`), gazebo_lidar, slam_toolbox, lidar_explorer (`explore:=false` to skip);
+  one `parameter_bridge` for everything.
+- **slam_toolbox in a namespace:** its map topic is the `map_name` param, default absolute `/map` —
+  three instances would collide. Set `map_name: /robotN/map` + frames + `scan_topic` per robot. The yaml
+  is loaded in the launch file and passed as a dict, because its `slam_toolbox:` key doesn't match the
+  namespaced node name `/robotN/slam_toolbox`.
+- **Spawn poses** (`ROBOTS` in the launch file), picked from `maps/office.pgm` rendered with a grid
+  (AMR map frame = Gazebo world, the AMR robot spawned at the origin): robot1 (0,0,0) centre hall,
+  robot2 (-9,2,0) left wing, robot3 (19,-1,π) right wing.
+
+**Checks (headless, isolated `IGN_PARTITION`/`ROS_DOMAIN_ID`):**
+- `explore:=false`: all `/robotN/*` topics up, true poses = spawn poses, three separate maps
+  (368x272, 273x328, 356x256), TF `robot2/map -> robot2/lidar_link` resolves, scan frame `robot3/lidar_link`.
+- Disc test: two extra lidar nodes at robot2's pose, noise 0, with/without `other_robots:=[robot1]`.
+  Exactly 2 beams differ (167, 168): 9.10 m vs inf. Expected: |(0,0)-(-9,2)| - 0.13 = 9.09 m at bearing
+  -12.5° (beam 167 = -13°). ✓
+- Full run, 265 s sim: all three drive simultaneously; maps 175 / 185 / 133 m^2; 5 stuck events, all
+  recovered. **But** they converge: robot1 and robot2 both went east, robot3 came back to the centre,
+  all within x 10–24 by the end — each robot only knows its own map. That is phases 5–6.
+
 ## Open items
 
-- Phase 2: namespaced single robot.
+- Phase 5: `map_merger` (world frame, merged `/map`).
+- Phase 6: explorers on the merged map + goal reservation.
 - `README.md` is still the AMR copy — rewrite in phase 8.

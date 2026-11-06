@@ -30,29 +30,28 @@ source /opt/ros/humble/setup.bash
 colcon build --symlink-install && source install/setup.bash
 ```
 
-### Run: single robot (current state)
+### Run: three robots
 Run each command in its own terminal, inside the container. Don't set `LIBGL_ALWAYS_SOFTWARE`.
 ```bash
 # 1. world (-r starts it running)
 export GZ_SIM_RESOURCE_PATH=/ros2_ws/src/fleet_manager/models/gazebo:/ros2_ws/src
 ign gazebo -r /ros2_ws/src/fleet_manager/models/gazebo/office.world.sdf
-# 2. robot, ROS bridge, TF, lidar
-ros2 launch fleet_manager gazebo.launch.py
-# 3. SLAM
-ros2 run slam_toolbox async_slam_toolbox_node --ros-args \
-  --params-file /ros2_ws/src/fleet_manager/config/async_slam_toolbox_cfg.yaml
-# 4. autonomous exploration
-ros2 run fleet_manager lidar_explorer --ros-args -p use_sim_time:=true
-# 5. visualisation
+# 2. three robots: spawn, bridge, TF, lidar, SLAM and explorer for each
+ros2 launch fleet_manager fleet.launch.py          # explore:=false -> robots + SLAM only
+# 3. visualisation (Fixed Frame: robot1/map, add Map displays for /robotN/map)
 rviz2 --ros-args -p use_sim_time:=true
-# when the explorer logs "exploration complete"
-ros2 run nav2_map_server map_saver_cli -f /ros2_ws/src/fleet_manager/maps/office_explored
 ```
 
-Quick check without the explorer: `ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2}}"`.
+Each robot lives in its own namespace (`robot1`..`robot3`) with TF prefix `robotN/`. Spawn poses are
+set in `ROBOTS` at the top of `launch/fleet.launch.py`.
 
-### Run: three robots
-_To be added (`fleet.launch.py`)._
+Drive one robot by hand (with `explore:=false`):
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/robot1/cmd_vel
+```
+
+Current state: each robot explores with **its own** map, so they still drift into the same areas.
+The shared map and frontier coordination come next.
 
 ## Architecture
 

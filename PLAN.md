@@ -47,7 +47,7 @@ Naming convention: everything per robot lives under namespace `robotN` (topics) 
 | `scripts/urdf_gazebo_nosensors.py` | Phase 2: `--ns robotN` arg rewriting plugin topics/frames |
 | `models/gazebo/office.world.sdf`, `models/gazebo/office/` | as is |
 | `config/async_slam_toolbox_cfg.yaml` | per-robot frames/topics overridden from launch |
-| `launch/gazebo.launch.py` | single-robot template, becomes `fleet.launch.py` |
+| `launch/gazebo.launch.py` | replaced by `fleet.launch.py` (deleted) |
 | `maps/office.{pgm,yaml}` | reference only: pick free spawn poses |
 
 Not copied: `mujoco_bridge`, `gazebo_camera` (MuJoCo), `path_logger` (nav2-specific),
@@ -59,14 +59,14 @@ Each phase ends with a check that must pass before moving on.
 
 - [x] **1. Package skeleton** — `CMakeLists.txt`, `package.xml`, assets copied.
   *Check:* `colcon build` passes in the container.
-- [ ] **2. One namespaced robot** — `urdf_gazebo_nosensors.py --ns robot1` rewrites diff-drive /
+- [x] **2. One namespaced robot** — `urdf_gazebo_nosensors.py --ns robot1` rewrites diff-drive /
   odometry-publisher / joint-state topics to `robot1/...` and frames to `robot1/odom`,
   `robot1/base_link`; RSP with `frame_prefix: robot1/`.
   *Check:* teleop on `robot1/cmd_vel` drives it; TF tree `robot1/odom -> robot1/base_link -> ...`.
-- [ ] **3. Three robots** — `fleet.launch.py` loops over spawn poses (x, y, yaw) in different rooms:
+- [x] **3. Three robots** — `fleet.launch.py` loops over spawn poses (x, y, yaw) in different rooms:
   spawn + bridge + RSP + lidar + SLAM per robot.
   *Check:* three `robotN/map` topics in RViz.
-- [ ] **4. Robots see each other** — each `gazebo_lidar` subscribes to the other robots'
+- [x] **4. Robots see each other** — each `gazebo_lidar` subscribes to the other robots'
   `ground_truth/odom` and ray casts a disc (r ≈ 0.15 m) per robot.
   *Check:* two robots face to face appear in each other's scan.
 - [ ] **5. `map_merger` node** — static TF `world -> robotN/map` = spawn pose; overlays the 3 grids
