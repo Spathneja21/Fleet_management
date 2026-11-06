@@ -1,11 +1,13 @@
 // Frontier explorer: picks the nearest reachable frontier (free cell next to unknown) in the SLAM
 // map, follows a grid BFS path toward it, and drives with the lidar gap logic as the local layer.
 // Before the first map arrives it falls back to the range-weighted widest-gap rule.
-// The travelled path is published on /explorer_path and the current waypoint on /explorer_goal.
+// The travelled path is published on explorer_path and the current waypoint on explorer_goal.
+// Topics are relative and frames are parameters, so one instance runs per robot namespace.
 #include <algorithm>
 #include <cmath>
 #include <deque>
 #include <queue>
+#include <string>
 #include <vector>
 
 #include "geometry_msgs/msg/point_stamped.hpp"
@@ -44,22 +46,24 @@ public:
         min_cluster_  = declare_parameter("min_frontier_cells", 8);
         goal_timeout_ = declare_parameter("goal_timeout_s", 40.0);
         reach_dist_   = declare_parameter("frontier_reached_dist", 0.4);
+        map_frame_    = declare_parameter<std::string>("map_frame", "map");        // frame of the map topic
+        base_frame_   = declare_parameter<std::string>("base_frame", "base_link"); // e.g. robot1/base_link
 
-        cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
-        path_pub_ = create_publisher<nav_msgs::msg::Path>("/explorer_path", 1);
-        goal_pub_ = create_publisher<geometry_msgs::msg::PointStamped>("/explorer_goal", 1);
+        cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+        path_pub_ = create_publisher<nav_msgs::msg::Path>("explorer_path", 1);
+        goal_pub_ = create_publisher<geometry_msgs::msg::PointStamped>("explorer_goal", 1);
         scan_sub_ = create_subscription<sensor_msgs::msg::LaserScan>(
-            "/scan", rclcpp::SensorDataQoS(),
+            "scan", rclcpp::SensorDataQoS(),
             std::bind(&LidarExplorer::on_scan, this, std::placeholders::_1));
         odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-            "/odom", 10, std::bind(&LidarExplorer::on_odom, this, std::placeholders::_1));
+            "odom", 10, std::bind(&LidarExplorer::on_odom, this, std::placeholders::_1));
         map_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
-            "/map", rclcpp::QoS(1).reliable(),
+            "map", rclcpp::QoS(1).reliable(),
             [this](nav_msgs::msg::OccupancyGrid::ConstSharedPtr m) { map_ = m; });
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-        path_.header.frame_id = "map";
+        path_.header.frame_id = map_frame_;
         path_timer_ = create_wall_timer(std::chrono::milliseconds(500), [this] {
             path_.header.stamp = now();
             path_pub_->publish(path_);
@@ -76,7 +80,7 @@ private:
         if (!map_ || done_) return;
         geometry_msgs::msg::TransformStamped tf;
         try {
-            tf = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
+            tf = tf_buffer_->lookupTransform(map_frame_, base_frame_, tf2::TimePointZero);
         } catch (const tf2::TransformException& e) {
             RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "no map->base_link yet: %s", e.what());
             return;
@@ -238,7 +242,7 @@ private:
         has_goal_ = std::hypot(fx - mx, fy - my) > reach_dist_;
 
         geometry_msgs::msg::PointStamped p;
-        p.header.frame_id = "map";
+        p.header.frame_id = map_frame_;
         p.header.stamp = now();
         p.point.x = goal_x_;
         p.point.y = goal_y_;
@@ -249,7 +253,7 @@ private:
     bool goal_bearing(double& bearing) {
         if (!has_goal_) return false;
         try {
-            const auto tf = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
+            const auto tf = tf_buffer_->lookupTransform(map_frame_, base_frame_, tf2::TimePointZero);
             const auto& q = tf.transform.rotation;
             const double yaw = std::atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
             bearing = std::remainder(std::atan2(goal_y_ - tf.transform.translation.y,
@@ -270,7 +274,7 @@ private:
         // Record the map-frame pose at this moment, so later SLAM corrections to map->odom don't
         // move the points already drawn. Nothing is recorded until SLAM publishes map->base_link.
         try {
-            const auto tf = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
+            const auto tf = tf_buffer_->lookupTransform(map_frame_, base_frame_, tf2::TimePointZero);
             const auto& tr = tf.transform.translation;
             if (path_.poses.empty() || std::hypot(tr.x - last_path_x_, tr.y - last_path_y_) > 0.05) {
                 geometry_msgs::msg::PoseStamped ps;
@@ -405,6 +409,7 @@ private:
     double backup_s_, backup_v_, progress_d_;
     double inflate_, lookahead_, min_front_d_, goal_timeout_, reach_dist_;
     int min_cluster_;
+    std::string map_frame_, base_frame_;
     double escape_until_ = 0, backup_until_ = 0, escape_dir_ = 1;
     double best_fdist_ = 0, retry_area_ = -1e9;
     double last_path_x_ = 0, last_path_y_ = 0;

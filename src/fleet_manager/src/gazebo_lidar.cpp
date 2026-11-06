@@ -1,8 +1,9 @@
 // 2D lidar for the Gazebo backend, no rendering involved: casts rays from the robot's true pose
-// against the box collisions of the world's model.sdf and publishes /scan. Same scan layout as
-// mujoco_bridge (360 beams, index 0 = behind, no return = inf). Gazebo's own gpu_lidar crashes the
-// server here, see PROCESS.md. ponytail: sees only the static boxes in the file, not objects added
-// to the world at runtime; subscribe to entity poses if moving obstacles are ever needed.
+// against the box collisions of the world's model.sdf, plus the other robots of the fleet as discs,
+// and publishes `scan`. Topics are relative, so run one per robot in its namespace (frame becomes
+// robotN/lidar_link). 360 beams, index 0 = behind, no return = inf. Gazebo's own gpu_lidar crashes the
+// server here, see PROCESS.md. ponytail: sees only the static boxes and the fleet's robots, not other
+// objects added to the world at runtime.
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -33,10 +34,23 @@ public:
             return;
         }
 
-        scan_pub_ = create_publisher<sensor_msgs::msg::LaserScan>("/scan", 10);
+        // "/robot1" -> "robot1/lidar_link", no namespace -> "lidar_link"
+        const std::string ns = get_namespace();
+        frame_ = ns == "/" ? "lidar_link" : ns.substr(1) + "/lidar_link";
+        robot_r_ = declare_parameter("robot_radius", 0.13);  // other robots are discs of this radius
+
+        scan_pub_ = create_publisher<sensor_msgs::msg::LaserScan>("scan", 10);
         pose_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-            "/ground_truth/odom", 10, std::bind(&GazeboLidar::on_pose, this, std::placeholders::_1));
-        RCLCPP_INFO(get_logger(), "gazebo_lidar up: %zu boxes from %s", boxes_.size(), sdf.c_str());
+            "ground_truth/odom", 10, std::bind(&GazeboLidar::on_pose, this, std::placeholders::_1));
+        const auto others = declare_parameter("other_robots", std::vector<std::string>{});
+        others_.resize(others.size(), {NAN, NAN});
+        for (size_t i = 0; i < others.size(); ++i)
+            other_subs_.push_back(create_subscription<nav_msgs::msg::Odometry>(
+                "/" + others[i] + "/ground_truth/odom", 10, [this, i](nav_msgs::msg::Odometry::ConstSharedPtr m) {
+                    others_[i] = {m->pose.pose.position.x, m->pose.pose.position.y};
+                }));
+        RCLCPP_INFO(get_logger(), "gazebo_lidar up: %zu boxes from %s, %zu other robots, frame %s", boxes_.size(),
+                    sdf.c_str(), others.size(), frame_.c_str());
     }
 
 private:
@@ -81,6 +95,16 @@ private:
         return std::max(t0, 0.0);  // origin inside the box: distance 0
     }
 
+    // distance along the (unit) ray to a disc of radius r at (cx, cy), or +inf
+    static double hit_disc(double cx, double cy, double r, double ox, double oy, double dx, double dy) {
+        const double fx = ox - cx, fy = oy - cy, b = fx * dx + fy * dy, c = fx * fx + fy * fy - r * r;
+        const double disc = b * b - c;
+        if (disc < 0) return std::numeric_limits<double>::infinity();
+        const double t = -b - std::sqrt(disc);
+        if (t >= 0) return t;
+        return c <= 0 ? 0.0 : std::numeric_limits<double>::infinity();  // inside: 0, disc behind: miss
+    }
+
     void on_pose(nav_msgs::msg::Odometry::ConstSharedPtr msg) {
         // Driven and stamped by Gazebo's clock, so the scan stays in step with sim time at any speed.
         const double t = rclcpp::Time(msg->header.stamp).seconds();
@@ -93,7 +117,7 @@ private:
                                       1 - 2 * (p.orientation.y * p.orientation.y + p.orientation.z * p.orientation.z));
         sensor_msgs::msg::LaserScan scan;
         scan.header.stamp = msg->header.stamp;
-        scan.header.frame_id = "lidar_link";
+        scan.header.frame_id = frame_;
         scan.angle_min = -M_PI;
         scan.angle_increment = 2.0 * M_PI / BEAMS;
         scan.angle_max = scan.angle_min + (BEAMS - 1) * scan.angle_increment;
@@ -106,14 +130,20 @@ private:
             const double dx = std::cos(a), dy = std::sin(a);
             double best = std::numeric_limits<double>::infinity();
             for (const auto& b : boxes_) best = std::min(best, hit(b, p.position.x, p.position.y, dx, dy));
+            for (const auto& o : others_)
+                if (!std::isnan(o.first))
+                    best = std::min(best, hit_disc(o.first, o.second, robot_r_, p.position.x, p.position.y, dx, dy));
             scan.ranges[i] = best >= RANGE_MAX ? std::numeric_limits<float>::infinity()
                                                : std::max(best + noise_(rng_), RANGE_MIN);
         }
         scan_pub_->publish(scan);
     }
 
-    double lidar_z_, period_, last_t_ = -1.0;
+    double lidar_z_, period_, last_t_ = -1.0, robot_r_;
+    std::string frame_;
     std::vector<Box> boxes_;
+    std::vector<std::pair<double, double>> others_;  // latest true position of each other robot, NaN until heard
+    std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr> other_subs_;
     std::mt19937 rng_{std::random_device{}()};
     std::normal_distribution<double> noise_;
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub_;

@@ -61,6 +61,13 @@ docker run -it --name fleet \
 cd /ros2_ws && colcon build --symlink-install && source install/setup.bash
 ```
 
+## 3. Single-robot Gazebo smoke test (headless)
+
+Throwaway container, isolated (`IGN_PARTITION=fleettest`, `ROS_DOMAIN_ID=77`), `ign gazebo -s -r` + `gazebo.launch.py`:
+all topics up (`/scan`, `/odom`, `/ground_truth/odom`, `/tf`, `/clock`, `/joint_states`), scan ranges sane
+(~4.7–7.6 m), `/cmd_vel` 0.2 m/s moved the robot to true x = 1.15 m. SLAM + explorer not run yet in this project.
+README rewritten from scratch; "Commands" section added.
+
 ## Open items
 
 - Phase 2: namespaced single robot.
