@@ -4,7 +4,7 @@ Three robots explore an office in Gazebo at the same time, build one shared map,
 
 ROS 2 Humble, C++, Gazebo Sim (Fortress). The exploration algorithm comes from (https://github.com/Spathneja21/AMR).
 
-![Merged office map built by three robots, with each robot's explored path](src/fleet_manager/models/gazebo/office/fleet_scan.png)
+![Merged office map built by three robots, with each robot's explored path](src/fleet_manager/models/gazebo/office/lidar_scan1.png)
 
 The merged `/map` after a full run, with each robot's path: robot1 red (centre), robot2 green (left wing),
 robot3 blue (right wing). Dots mark where each robot ended. Because they plan on the shared map,
