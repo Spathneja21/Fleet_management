@@ -69,7 +69,7 @@ Each phase ends with a check that must pass before moving on.
 - [x] **4. Robots see each other** — each `gazebo_lidar` subscribes to the other robots'
   `ground_truth/odom` and ray casts a disc (r ≈ 0.15 m) per robot.
   *Check:* two robots face to face appear in each other's scan.
-- [ ] **5. `map_merger` node** — static TF `world -> robotN/map` = spawn pose; overlays the 3 grids
+- [x] **5. `map_merger` node** — static TF `world -> robotN/map` = spawn pose; overlays the 3 grids
   into `/map` (occupied if any says occupied, else free if any says free, else unknown).
   *Check:* merged map aligned, no doubled walls.
 - [ ] **6. Multi-robot explorer** — relative topics, `map_frame=world`, `base_frame=robotN/base_link`,

@@ -102,8 +102,21 @@ README rewritten from scratch; "Commands" section added.
   recovered. **But** they converge: robot1 and robot2 both went east, robot3 came back to the centre,
   all within x 10–24 by the end — each robot only knows its own map. That is phases 5–6.
 
+## 5. Phase 5: shared map (`map_merger`) (2026-11-07)
+
+- `static_transform_publisher` per robot in the launch file: `world -> robotN/map` = spawn pose.
+- `src/map_merger.cpp` (new): subscribes `/robotN/map`, places each via TF `world -> robotN/map`,
+  output grid = union of the maps' world bounding boxes at 0.05 m. Each output cell samples every robot map:
+  occupied if any >= 50, else free if any >= 0, else unknown. Publishes `/map` (frame `world`,
+  transient_local) at 1 Hz.
+- Explorers remapped `map -> /map`, `map_frame: world`, so all three plan on the shared map;
+  `explorer_path` is now in `world` too.
+- Verified by the user in the GUI: "working fine". (My headless 8-min alignment run was stopped; the user
+  prefers to run the sim commands themselves.)
+- README: Architecture section written (node/topic diagram, node table, TF tree, merge rule).
+
 ## Open items
 
-- Phase 5: `map_merger` (world frame, merged `/map`).
-- Phase 6: explorers on the merged map + goal reservation.
+- Phase 6: goal reservation (skip frontiers near other robots' goals) if robots still bunch up.
+- Phase 7: trajectory recording + plot.
 - `README.md` is still the AMR copy — rewrite in phase 8.
