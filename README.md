@@ -35,7 +35,7 @@ source /opt/ros/humble/setup.bash
 colcon build --symlink-install && source install/setup.bash
 ```
 
-### Run: three robots
+### Run: three robots, mapping
 Run each command in its own terminal, inside the container. Don't set `LIBGL_ALWAYS_SOFTWARE`.
 ```bash
 # 1. world (-r starts it running)
@@ -55,7 +55,35 @@ Drive one robot by hand (with `explore:=false`):
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/robot1/cmd_vel
 ```
 
+When the map is complete, save the merged map:
+```bash
+ros2 run nav2_map_server map_saver_cli -t /map -f /ros2_ws/src/fleet_manager/maps/fleet_office \
+  --ros-args -p use_sim_time:=true
+```
+
+### Run: three robots, navigation (nav2)
+Restart Gazebo first, so the robots are back at their spawn poses; AMCL starts from those poses.
+```bash
+# 1. world
+export GZ_SIM_RESOURCE_PATH=/ros2_ws/src/fleet_manager/models/gazebo:/ros2_ws/src
+ign gazebo -r /ros2_ws/src/fleet_manager/models/gazebo/office.world.sdf
+# 2. three robots + saved map + AMCL and nav2 per robot + goal dispatcher + RViz
+ros2 launch fleet_manager fleet.launch.py map:=/ros2_ws/src/fleet_manager/maps/fleet_office.yaml
+```
+In RViz, click **2D Goal Pose** and place a goal. The robot with the shortest planned path to it takes the
+goal; the dispatcher logs every robot's path length and which one it picked. From a terminal:
+```bash
+ros2 topic pub --once /goal_pose geometry_msgs/msg/PoseStamped \
+  "{header: {frame_id: world}, pose: {position: {x: 2.0, y: 5.0}, orientation: {w: 1.0}}}"
+```
+
 ## Architecture
+
+`fleet.launch.py` has two modes. **Mapping** (default) explores and builds the shared map.
+**Navigation** (`map:=<saved map>`) uses that map to send each goal to the closest robot. Gazebo, the
+bridge and the lidars are the same in both.
+
+## Mapping mode
 
 ### Nodes and topics
 
@@ -138,3 +166,62 @@ as explored and heads for a different frontier.
 
 Limitation: merging trusts the spawn poses exactly. If walls ever appear doubled, the map placement has
 to be estimated from the scans instead.
+
+## Navigation mode
+
+### Nodes and topics
+
+SLAM, the explorers and `map_merger` are replaced by a saved map, per-robot localization and nav2.
+
+```mermaid
+flowchart LR
+    MS["map_server<br/>saved fleet map"] -- "/map (frame world)" --> AMCL
+    MS -- "/map" --> NAV
+    subgraph R["per robot (namespace robotN, shown once)"]
+        direction LR
+        AMCL["amcl"]
+        NAV["nav2: planner_server,<br/>controller_server,<br/>behavior_server, bt_navigator"]
+    end
+    LID["gazebo_lidar"] -- "robotN/scan" --> AMCL
+    LID -- "robotN/scan" --> NAV
+    AMCL -- "TF world -> robotN/odom" --> NAV
+    RV["RViz<br/>2D Goal Pose"] -- "/goal_pose" --> GD["goal_dispatcher"]
+    GD -- "robotN/compute_path_to_pose" --> NAV
+    GD -- "robotN/navigate_to_pose<br/>(closest robot only)" --> NAV
+    NAV -- "robotN/cmd_vel" --> BR["ros_gz_bridge"]
+```
+
+| Node | Count | Role |
+|---|---|---|
+| `map_server` | 1 | Publishes the saved merged map as `/map` in the `world` frame |
+| `amcl` | 3 | Localizes the robot on the shared map; starts at the spawn pose; publishes `world -> robotN/odom` |
+| nav2 servers | 3 sets | Planner (NavFn), controller (rotation shim + DWB), recovery behaviors, behavior tree navigator |
+| `lifecycle_manager` | 3 + 1 | Brings each robot's nav2 nodes, and the map server, up in order |
+| `goal_dispatcher` | 1 | Picks the closest robot for each goal and sends it there |
+
+Each robot's nav2 nodes are started directly from `fleet.launch.py`, rather than through nav2's own
+`navigation_launch.py`. That file remaps `/tf` into the robot's namespace, but this fleet shares one `/tf`.
+`config/nav2_params.yaml` is written once with a `<robot>` placeholder, and the launch file fills it in
+for each robot.
+
+In this mode the TF chain is `world -> robotN/odom` (AMCL), then `robotN/base_link` (Gazebo diff drive).
+
+### Choosing the closest robot
+
+```mermaid
+sequenceDiagram
+    participant RV as RViz
+    participant GD as goal_dispatcher
+    participant P as planner_server x3
+    participant N as bt_navigator (chosen robot)
+    RV->>GD: /goal_pose
+    GD->>P: compute_path_to_pose (from each robot's current pose)
+    P-->>GD: 3 paths
+    Note over GD: length = sum of segment lengths<br/>pick the shortest, idle robots first
+    GD->>N: navigate_to_pose
+    N-->>GD: succeeded / failed
+```
+
+"Closest" means the shortest **planned path**, not straight-line distance: in an office, a robot just
+behind a wall can be near the goal in a straight line but far from it along the corridors. Idle robots are
+preferred. If every robot that can reach the goal is busy, the closest one is re-tasked.

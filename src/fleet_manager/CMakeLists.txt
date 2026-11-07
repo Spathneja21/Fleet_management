@@ -24,7 +24,13 @@ ament_target_dependencies(gazebo_lidar rclcpp sensor_msgs nav_msgs)
 add_executable(map_merger src/map_merger.cpp)
 ament_target_dependencies(map_merger rclcpp nav_msgs tf2_ros)
 
-install(TARGETS lidar_explorer gazebo_lidar map_merger DESTINATION lib/${PROJECT_NAME})
+# goal_dispatcher: /goal_pose -> the robot with the shortest nav2 path
+find_package(rclcpp_action REQUIRED)
+find_package(nav2_msgs REQUIRED)
+add_executable(goal_dispatcher src/goal_dispatcher.cpp)
+ament_target_dependencies(goal_dispatcher rclcpp rclcpp_action geometry_msgs nav2_msgs)
+
+install(TARGETS lidar_explorer gazebo_lidar map_merger goal_dispatcher DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch urdf models config maps DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/urdf_gazebo_nosensors.py DESTINATION lib/${PROJECT_NAME})
 

@@ -1,4 +1,4 @@
-# RViz2 config for the 3-robot fleet: merged map, robot models, explorer paths and goals.
+# RViz2 config for the 3-robot fleet: merged map, robot models, explorer paths and goals, nav2 plans, 2D Goal Pose tool.
 # Opened by fleet.launch.py (rviz:=false to skip). Colours: robot1 red, robot2 green, robot3 blue.
 Panels:
 - Class: rviz_common/Displays
@@ -191,6 +191,66 @@ Visualization Manager:
       History Policy: Keep Last
       Reliability Policy: Reliable
       Value: /robot3/explorer_goal
+  - Class: rviz_default_plugins/Path
+    Name: robot1 nav2 plan
+    Enabled: true
+    Value: true
+    Alpha: 0.6
+    Buffer Length: 1
+    Color: 237; 51; 59
+    Line Style: Lines
+    Line Width: 0.03
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0.03
+    Pose Style: None
+    Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot1/plan
+  - Class: rviz_default_plugins/Path
+    Name: robot2 nav2 plan
+    Enabled: true
+    Value: true
+    Alpha: 0.6
+    Buffer Length: 1
+    Color: 51; 209; 122
+    Line Style: Lines
+    Line Width: 0.03
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0.03
+    Pose Style: None
+    Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot2/plan
+  - Class: rviz_default_plugins/Path
+    Name: robot3 nav2 plan
+    Enabled: true
+    Value: true
+    Alpha: 0.6
+    Buffer Length: 1
+    Color: 53; 132; 228
+    Line Style: Lines
+    Line Width: 0.03
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0.03
+    Pose Style: None
+    Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot3/plan
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: world
@@ -201,6 +261,13 @@ Visualization Manager:
   - Class: rviz_default_plugins/Select
   - Class: rviz_default_plugins/FocusCamera
   - Class: rviz_default_plugins/Measure
+  - Class: rviz_default_plugins/SetGoal
+    Topic:
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /goal_pose
   Views:
     Current:
       Class: rviz_default_plugins/TopDownOrtho

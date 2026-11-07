@@ -115,8 +115,35 @@ README rewritten from scratch; "Commands" section added.
   prefers to run the sim commands themselves.)
 - README: Architecture section written (node/topic diagram, node table, TF tree, merge rule).
 
+## 6. RViz config + navigation with nav2 (2026-11-07)
+
+**RViz:** RobotModel showed all robots at the origin, "No transform from [base_link]": the display's
+TF Prefix was empty, but RSP publishes `robotN/base_link`. `config/fleet.rviz` (opened by the launch file,
+`rviz:=false` to skip): Fixed Frame `world`, `/map` (transient local), per robot a model with
+TF Prefix `robotN`, explorer path, explorer goal, nav2 plan (`/robotN/plan`), plus the 2D Goal Pose tool.
+
+**Navigation decisions (asked the user):** saved map + AMCL (not live SLAM); "closest" = nav2 path length,
+not straight-line distance.
+- `config/nav2_params.yaml`: the AMR params, with `<robot>` placeholders. Global frame `world`, odom
+  `<robot>/odom`, base `<robot>/base_link`. Topics absolute (`/<robot>/scan`, `/map`), because the costmap
+  layers live in a sub-namespace. Dropped smoother/waypoint follower/velocity smoother/assisted teleop.
+- `fleet.launch.py` restructured with `OpaqueFunction`: `map:=<yaml>` switches to navigation mode. It writes
+  `/tmp/nav2_params_robotN.yaml` (placeholder filled, nested under `robotN:`, AMCL initial pose = spawn).
+- **nav2_bringup's `navigation_launch.py` not usable:** it remaps `/tf -> tf`, which inside a namespace
+  becomes `/robotN/tf`, but our TF is one shared `/tf`. The 5 nav2 nodes + lifecycle_manager are launched
+  directly per robot.
+- `src/goal_dispatcher.cpp`: `/goal_pose` -> `ComputePathToPose` (use_start=false) on every robot -> sum of
+  segment lengths -> shortest idle robot (else shortest busy, which preempts) gets `NavigateToPose`.
+  Generation counters drop stale planner answers and old navigation results of a re-tasked robot.
+
+**Smoke test** (headless, AMR `maps/office.yaml` as the map, since its frame = world): all nav2 nodes active
+(two `ros2 lifecycle get` calls came back empty, which looks like CLI discovery misses), goal (2,5): path
+lengths robot1 5.407 / robot2 11.67 / robot3 20.50 -> robot1, which was at (1.85, 4.68) 20 s later.
+No ERROR/FATAL in the log.
+
 ## Open items
+
+- User to run navigation mode with the real saved fleet map (`maps/fleet_office.yaml`).
 
 - Phase 6: goal reservation (skip frontiers near other robots' goals) if robots still bunch up.
 - Phase 7: trajectory recording + plot.
-- `README.md` is still the AMR copy — rewrite in phase 8.

@@ -80,6 +80,11 @@ Each phase ends with a check that must pass before moving on.
   estimated vs true path + drift.
   *Check:* PNG with 3 coloured trajectories over the final map.
 - [ ] **8. Wrap-up** — `map_saver_cli` merged map, README rewritten for this project.
+- [x] **9. Navigation: closest robot takes the goal** — save the merged map; `fleet.launch.py map:=...`
+  runs map_server (frame `world`) + per robot AMCL (initial pose = spawn) + nav2 (planner, controller,
+  behaviors, bt_navigator). `goal_dispatcher`: `/goal_pose` -> `compute_path_to_pose` on every robot ->
+  shortest path (idle first) gets `navigate_to_pose`.
+  *Check:* goal (2,5): robot1 5.4 m / robot2 11.7 m / robot3 20.5 m -> robot1 drove there, others idle.
 
 ## Risks
 
