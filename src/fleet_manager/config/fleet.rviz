@@ -1,0 +1,220 @@
+# RViz2 config for the 3-robot fleet: merged map, robot models, explorer paths and goals.
+# Opened by fleet.launch.py (rviz:=false to skip). Colours: robot1 red, robot2 green, robot3 blue.
+Panels:
+- Class: rviz_common/Displays
+  Name: Displays
+Visualization Manager:
+  Class: ''
+  Name: root
+  Enabled: true
+  Value: true
+  Displays:
+  - Class: rviz_default_plugins/Grid
+    Name: Grid
+    Enabled: true
+    Value: true
+    Cell Size: 1
+    Plane Cell Count: 60
+    Color: 160; 160; 164
+    Alpha: 0.3
+    Reference Frame: <Fixed Frame>
+  - Class: rviz_default_plugins/Map
+    Name: Merged map
+    Enabled: true
+    Value: true
+    Alpha: 0.8
+    Color Scheme: map
+    Draw Behind: true
+    Use Timestamp: false
+    Topic:
+      Depth: 1
+      Durability Policy: Transient Local
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /map
+    Update Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /map_updates
+  - Class: rviz_default_plugins/RobotModel
+    Name: robot1 model
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Description Source: Topic
+    Description File: ''
+    Description Topic:
+      Depth: 1
+      Durability Policy: Transient Local
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot1/robot_description
+    TF Prefix: robot1
+    Visual Enabled: true
+    Collision Enabled: false
+    Update Interval: 0
+  - Class: rviz_default_plugins/Path
+    Name: robot1 path
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Buffer Length: 1
+    Color: 237; 51; 59
+    Line Style: Billboards
+    Line Width: 0.05
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0.02
+    Pose Style: None
+    Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot1/explorer_path
+  - Class: rviz_default_plugins/PointStamped
+    Name: robot1 goal
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Color: 237; 51; 59
+    History Length: 1
+    Radius: 0.25
+    Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot1/explorer_goal
+  - Class: rviz_default_plugins/RobotModel
+    Name: robot2 model
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Description Source: Topic
+    Description File: ''
+    Description Topic:
+      Depth: 1
+      Durability Policy: Transient Local
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot2/robot_description
+    TF Prefix: robot2
+    Visual Enabled: true
+    Collision Enabled: false
+    Update Interval: 0
+  - Class: rviz_default_plugins/Path
+    Name: robot2 path
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Buffer Length: 1
+    Color: 51; 209; 122
+    Line Style: Billboards
+    Line Width: 0.05
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0.02
+    Pose Style: None
+    Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot2/explorer_path
+  - Class: rviz_default_plugins/PointStamped
+    Name: robot2 goal
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Color: 51; 209; 122
+    History Length: 1
+    Radius: 0.25
+    Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot2/explorer_goal
+  - Class: rviz_default_plugins/RobotModel
+    Name: robot3 model
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Description Source: Topic
+    Description File: ''
+    Description Topic:
+      Depth: 1
+      Durability Policy: Transient Local
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot3/robot_description
+    TF Prefix: robot3
+    Visual Enabled: true
+    Collision Enabled: false
+    Update Interval: 0
+  - Class: rviz_default_plugins/Path
+    Name: robot3 path
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Buffer Length: 1
+    Color: 53; 132; 228
+    Line Style: Billboards
+    Line Width: 0.05
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0.02
+    Pose Style: None
+    Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot3/explorer_path
+  - Class: rviz_default_plugins/PointStamped
+    Name: robot3 goal
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Color: 53; 132; 228
+    History Length: 1
+    Radius: 0.25
+    Topic:
+      Depth: 1
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Value: /robot3/explorer_goal
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: world
+    Frame Rate: 30
+  Tools:
+  - Class: rviz_default_plugins/Interact
+  - Class: rviz_default_plugins/MoveCamera
+  - Class: rviz_default_plugins/Select
+  - Class: rviz_default_plugins/FocusCamera
+  - Class: rviz_default_plugins/Measure
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: Current View
+      Angle: 0
+      Near Clip Distance: 0.01
+      Scale: 30
+      Target Frame: <Fixed Frame>
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 6
+      Y: 0
+    Saved: null
+Window Geometry:
+  Height: 900
+  Width: 1500
+  Displays:
+    collapsed: false

@@ -5,7 +5,7 @@ One ros_gz_bridge carries /clock, the shared /tf and every robot's topics. A sta
 plans on that shared map.
 
 Start `ign gazebo -r .../office.world.sdf` yourself first (interactive GUI window). Then:
-    ros2 launch fleet_manager fleet.launch.py              # explore:=false to only bring up robots + SLAM
+    ros2 launch fleet_manager fleet.launch.py   # explore:=false: no explorers, rviz:=false: no RViz
 """
 import os
 
@@ -34,7 +34,8 @@ def generate_launch_description():
         slam_params = yaml.safe_load(f)['slam_toolbox']['ros__parameters']
 
     explore = LaunchConfiguration('explore')
-    actions = [DeclareLaunchArgument('explore', default_value='true')]
+    actions = [DeclareLaunchArgument('explore', default_value='true'),
+               DeclareLaunchArgument('rviz', default_value='true')]
     bridge_args = ['/clock@rosgraph_msgs/msg/Clock[ignition.msgs.Clock',
                    '/tf@tf2_msgs/msg/TFMessage[ignition.msgs.Pose_V']
     names = [r[0] for r in ROBOTS]
@@ -75,5 +76,9 @@ def generate_launch_description():
 
     actions.append(Node(package='fleet_manager', executable='map_merger', output='screen',
                         parameters=[{'robots': names, 'use_sim_time': True}]))
+    # map, all robot models, explorer paths and goals preconfigured (config/fleet.rviz)
+    actions.append(Node(package='rviz2', executable='rviz2', condition=IfCondition(LaunchConfiguration('rviz')),
+                        arguments=['-d', os.path.join(share, 'config', 'fleet.rviz')],
+                        parameters=[{'use_sim_time': True}]))
     actions.append(Node(package='ros_gz_bridge', executable='parameter_bridge', arguments=bridge_args, output='screen'))
     return LaunchDescription(actions)

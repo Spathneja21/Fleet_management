@@ -4,6 +4,12 @@ Three robots explore an office in Gazebo at the same time, build one shared map,
 
 ROS 2 Humble, C++, Gazebo Sim (Fortress). The exploration algorithm comes from (https://github.com/Spathneja21/AMR).
 
+![Merged office map built by three robots, with each robot's explored path](src/fleet_manager/models/gazebo/office/fleet_scan.png)
+
+The merged `/map` after a full run, with each robot's path: robot1 red (centre), robot2 green (left wing),
+robot3 blue (right wing). Dots mark where each robot ended. Because they plan on the shared map,
+each robot explores its own part of the office instead of covering ground another robot already mapped.
+
 ## Commands
 
 Everything runs inside Docker, in the `supermarketbot:humble` image (ROS 2 Humble, slam_toolbox, Gazebo Fortress).
@@ -35,13 +41,11 @@ Run each command in its own terminal, inside the container. Don't set `LIBGL_ALW
 # 1. world (-r starts it running)
 export GZ_SIM_RESOURCE_PATH=/ros2_ws/src/fleet_manager/models/gazebo:/ros2_ws/src
 ign gazebo -r /ros2_ws/src/fleet_manager/models/gazebo/office.world.sdf
-# 2. three robots: spawn, bridge, TF, lidar, SLAM and explorer for each
-ros2 launch fleet_manager fleet.launch.py          # explore:=false -> robots + SLAM only
-# 3. visualisation
-rviz2 --ros-args -p use_sim_time:=true
+# 2. three robots (spawn, bridge, TF, lidar, SLAM, explorer each) + map merger + RViz
+ros2 launch fleet_manager fleet.launch.py          # explore:=false: no explorers, rviz:=false: no RViz
 ```
-In RViz, set Fixed Frame to `world`. Add a Map display on `/map` with Durability Policy set to Transient Local,
-and a Path display on each `/robotN/explorer_path`.
+RViz opens with `config/fleet.rviz`, already set up with the merged `/map`, all three robot models, and each
+robot's explorer path and current goal. Colours: robot1 red, robot2 green, robot3 blue.
 
 Each robot lives in its own namespace (`robot1`..`robot3`) with TF prefix `robotN/`. Spawn poses are
 set in `ROBOTS` at the top of `launch/fleet.launch.py`.
