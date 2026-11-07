@@ -141,9 +141,24 @@ not straight-line distance.
 lengths robot1 5.407 / robot2 11.67 / robot3 20.50 -> robot1, which was at (1.85, 4.68) 20 s later.
 No ERROR/FATAL in the log.
 
+## 7. Phase 7: trajectory tracking (2026-11-08)
+
+- `lidar_explorer.cpp` bug fix: each `explorer_path` pose copied `path_.header` for its stamp, but that
+  header's stamp is only refreshed by the 0.5 s `path_timer_`, not per point — so points were stamped in
+  batches up to 0.5 s stale. Fixed to stamp each pose with `now()` at the time it's actually recorded.
+- `scripts/plot_trajectories.py` (new): reads a `ros2 bag record` of `/map` + each robot's
+  `ground_truth/odom` and `explorer_path` directly via `rosbag2_py` (no live ROS session needed). Plots
+  true path (dashed) vs SLAM path (solid) over the final merged map; drift = true position resampled onto
+  SLAM path timestamps (nearest), reported as mean/max per robot. No path_logger-style CSVs (nav2-specific
+  in AMR) — reads the bag's messages directly.
+- Verified: 90 s headless run, all three robots recorded cleanly (175 explorer_path messages, ~4400 odom
+  messages each). Drift 0.03-0.04 m mean, 0.11-0.19 m max for all three robots — true and SLAM paths
+  overlap almost exactly in the plot at this run length. README: recording + plotting commands added.
+
 ## Open items
 
 - User to run navigation mode with the real saved fleet map (`maps/fleet_office.yaml`).
+- Longer run (full exploration) to see drift grow and loop-closure corrections, if any.
 
 - Phase 6: goal reservation (skip frontiers near other robots' goals) if robots still bunch up.
 - Phase 7: trajectory recording + plot.

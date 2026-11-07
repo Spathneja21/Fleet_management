@@ -61,6 +61,28 @@ ros2 run nav2_map_server map_saver_cli -t /map -f /ros2_ws/src/fleet_manager/map
   --ros-args -p use_sim_time:=true
 ```
 
+### Trajectory tracking
+
+Record each robot's true path (`ground_truth/odom`) and SLAM-estimated path (`explorer_path`) during a
+mapping run, alongside the merged map:
+```bash
+ros2 bag record -o runs/run1 /map \
+  /robot1/ground_truth/odom /robot2/ground_truth/odom /robot3/ground_truth/odom \
+  /robot1/explorer_path /robot2/explorer_path /robot3/explorer_path --use-sim-time
+```
+Then, outside or inside the container (needs `rosbag2_py`, numpy, matplotlib):
+```bash
+python3 src/fleet_manager/scripts/plot_trajectories.py runs/run1 --out runs/run1_trajectories.png
+```
+This draws each robot's true path (dashed) and SLAM path (solid) over the final merged map, and prints
+each robot's path length and drift (distance between the true and estimated position over time):
+```
+robot     true (m)  slam (m)  mean drift  max drift
+robot1        13.3      14.9      0.04 m     0.16 m
+robot2        14.4      16.3      0.04 m     0.19 m
+robot3        13.8      15.9      0.03 m     0.11 m
+```
+
 ### Run: three robots, navigation (nav2)
 Restart Gazebo first, so the robots are back at their spawn poses; AMCL starts from those poses.
 ```bash

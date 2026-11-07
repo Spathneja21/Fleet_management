@@ -278,7 +278,8 @@ private:
             const auto& tr = tf.transform.translation;
             if (path_.poses.empty() || std::hypot(tr.x - last_path_x_, tr.y - last_path_y_) > 0.05) {
                 geometry_msgs::msg::PoseStamped ps;
-                ps.header = path_.header;
+                ps.header.frame_id = path_.header.frame_id;
+                ps.header.stamp = now();  // the actual recording time, not path_'s 0.5 s republish stamp
                 ps.pose.position.x = tr.x;
                 ps.pose.position.y = tr.y;
                 ps.pose.position.z = tr.z;

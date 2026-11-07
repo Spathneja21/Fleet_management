@@ -75,10 +75,11 @@ Each phase ends with a check that must pass before moving on.
 - [ ] **6. Multi-robot explorer** — relative topics, `map_frame=world`, `base_frame=robotN/base_link`,
   plans on merged `/map`, publishes `robotN/explorer_goal`, skips frontiers near other robots' goals.
   *Check:* all 3 move simultaneously to different frontiers; exploration completes.
-- [ ] **7. Trajectory tracking** — `explorer_path` in `world` frame (3 colours in RViz);
+- [x] **7. Trajectory tracking** — `explorer_path` in `world` frame (3 colours in RViz);
   `ros2 bag record` ground truth + paths; `scripts/plot_trajectories.py` -> merged map + per-robot
   estimated vs true path + drift.
-  *Check:* PNG with 3 coloured trajectories over the final map.
+  *Check:* 90 s run, PNG with true (dashed) vs SLAM (solid) path per robot over the merged map;
+  drift 0.03-0.04 m mean, 0.11-0.19 m max for all three.
 - [ ] **8. Wrap-up** — `map_saver_cli` merged map, README rewritten for this project.
 - [x] **9. Navigation: closest robot takes the goal** — save the merged map; `fleet.launch.py map:=...`
   runs map_server (frame `world`) + per robot AMCL (initial pose = spawn) + nav2 (planner, controller,
