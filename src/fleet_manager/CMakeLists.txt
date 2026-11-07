@@ -20,7 +20,11 @@ ament_target_dependencies(lidar_explorer rclcpp sensor_msgs geometry_msgs nav_ms
 add_executable(gazebo_lidar src/gazebo_lidar.cpp)
 ament_target_dependencies(gazebo_lidar rclcpp sensor_msgs nav_msgs)
 
-install(TARGETS lidar_explorer gazebo_lidar DESTINATION lib/${PROJECT_NAME})
+# map_merger: every robotN/map -> one /map in the world frame (placement from TF)
+add_executable(map_merger src/map_merger.cpp)
+ament_target_dependencies(map_merger rclcpp nav_msgs tf2_ros)
+
+install(TARGETS lidar_explorer gazebo_lidar map_merger DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch urdf models config maps DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/urdf_gazebo_nosensors.py DESTINATION lib/${PROJECT_NAME})
 

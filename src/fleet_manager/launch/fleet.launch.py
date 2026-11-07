@@ -1,6 +1,8 @@
 """Three robots in the Gazebo office, each in its own namespace (robot1..3, TF prefix robotN/):
 spawn (sensor-stripped URDF), robot_state_publisher, gazebo_lidar, slam_toolbox, lidar_explorer.
-One ros_gz_bridge carries /clock, the shared /tf and every robot's topics.
+One ros_gz_bridge carries /clock, the shared /tf and every robot's topics. A static TF world -> robotN/map
+(= spawn pose) places each SLAM map, map_merger fuses them into /map (frame world) and every explorer
+plans on that shared map.
 
 Start `ign gazebo -r .../office.world.sdf` yourself first (interactive GUI window). Then:
     ros2 launch fleet_manager fleet.launch.py              # explore:=false to only bring up robots + SLAM
@@ -61,10 +63,17 @@ def generate_launch_description():
             parameters=[{**slam_params,
                          'odom_frame': f'{name}/odom', 'map_frame': f'{name}/map', 'base_frame': f'{name}/base_link',
                          'scan_topic': f'/{name}/scan', 'map_name': f'/{name}/map', 'use_sim_time': True}]))
+        # SLAM starts its map at the robot's start pose, so world -> robotN/map is the spawn pose
+        actions.append(Node(
+            package='tf2_ros', executable='static_transform_publisher', name=f'{name}_map_tf',
+            arguments=['--x', str(x), '--y', str(y), '--yaw', str(yaw),
+                       '--frame-id', 'world', '--child-frame-id', f'{name}/map']))
         actions.append(Node(
             package='fleet_manager', executable='lidar_explorer', namespace=name, output='screen',
-            condition=IfCondition(explore),
-            parameters=[{'map_frame': f'{name}/map', 'base_frame': f'{name}/base_link', 'use_sim_time': True}]))
+            condition=IfCondition(explore), remappings=[('map', '/map')],
+            parameters=[{'map_frame': 'world', 'base_frame': f'{name}/base_link', 'use_sim_time': True}]))
 
+    actions.append(Node(package='fleet_manager', executable='map_merger', output='screen',
+                        parameters=[{'robots': names, 'use_sim_time': True}]))
     actions.append(Node(package='ros_gz_bridge', executable='parameter_bridge', arguments=bridge_args, output='screen'))
     return LaunchDescription(actions)
